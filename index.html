@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Phần mềm trắc nghiệm tiểu học</title>
+  <style>
+    body { font-family: Arial; background:#f2f7ff; }
+    .container { max-width:650px; margin:30px auto; background:#fff; padding:25px; border-radius:14px; box-shadow:0 4px 10px rgba(0,0,0,.1); }
+    h1 { text-align:center; color:#2b6cb0; }
+    .option { padding:12px; margin:10px 0; background:#edf2f7; border-radius:10px; cursor:pointer; }
+    .option:hover { background:#bee3f8; }
+    .correct { background:#9ae6b4; }
+    .wrong { background:#feb2b2; }
+    button { padding:10px 20px; border:none; border-radius:8px; background:#2b6cb0; color:#fff; cursor:pointer; margin-top:10px; }
+    button:hover { background:#2c5282; }
+    input { padding:10px; width:100%; margin-top:8px; }
+    .toast { position:fixed; top:20px; right:20px; background:#2b6cb0; color:#fff; padding:12px 18px; border-radius:10px; }
+  </style>
+</head>
+<body>
+<div class="container" id="app"></div>
+
+<script>
+/* ===== DỮ LIỆU ===== */
+let questions = JSON.parse(localStorage.getItem('questions') || '[]');
+let index = 0, score = 0, student = '', timer;
+
+/* ===== MENU ===== */
+function showMenu() {
+  app.innerHTML = `
+    <h1>Phần mềm trắc nghiệm</h1>
+    <button onclick="showTeacher()">👩‍🏫 Giáo viên</button>
+    <button onclick="showStudent()">👦 Học sinh</button>
+  `;
+}
+
+/* ===== GIÁO VIÊN ===== */
+function showTeacher() {
+  app.innerHTML = `
+    <h1>Giáo viên thêm câu hỏi</h1>
+    <input id="q" placeholder="Câu hỏi">
+    <input id="a" placeholder="Đáp án A">
+    <input id="b" placeholder="Đáp án B">
+    <input id="c" placeholder="Đáp án C">
+    <input id="d" placeholder="Đáp án D">
+    <input id="ans" placeholder="Đáp án đúng (0-3)">
+    <button onclick="addQuestion()">➕ Thêm câu hỏi</button>
+    <button onclick="clearAll()" style="background:#c53030">🗑️ Xóa toàn bộ câu hỏi</button>
+    <button onclick="showMenu()">⬅ Quay lại</button>
+  `;
+}
+
+function addQuestion() {
+  const q = qv('q'), a = qv('a'), b = qv('b'), c = qv('c'), d = qv('d');
+  const ans = parseInt(qv('ans'));
+  if (!q || !a || !b || !c || !d || isNaN(ans) || ans<0 || ans>3) {
+    alert('Nhập đủ dữ liệu!');
+    return;
+  }
+  questions.push({ q, options:[a,b,c,d], answer:ans });
+  localStorage.setItem('questions', JSON.stringify(questions));
+  showToast(`Đã thêm (${questions.length} câu)`);
+  ['q','a','b','c','d','ans'].forEach(id=>document.getElementById(id).value='');
+}
+
+/* 🔴 CHỨC NĂNG XÓA HOÀN THIỆN */
+function clearAll() {
+  if (!confirm('Xóa TOÀN BỘ câu hỏi từ câu 1 đến hết?')) return;
+
+  questions.splice(0, questions.length); // xóa sạch mảng
+  localStorage.setItem('questions', JSON.stringify([]));
+
+  index = 0; score = 0; student = '';
+  clearInterval(timer);
+
+  showToast('Đã xóa toàn bộ câu hỏi');
+  showTeacher();
+}
+
+/* ===== HỌC SINH ===== */
+function showStudent() {
+  if (questions.length === 0) {
+    alert('Chưa có câu hỏi!');
+    return;
+  }
+  app.innerHTML = `
+    <h1>Học sinh làm bài</h1>
+    <input id="name" placeholder="Tên học sinh">
+    <button onclick="startQuiz()">▶ Bắt đầu</button>
+    <button onclick="showMenu()">⬅ Quay lại</button>
+  `;
+}
+
+function startQuiz() {
+  student = qv('name');
+  if (!student) return alert('Nhập tên!');
+  index = 0; score = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = questions[index];
+  app.innerHTML = `<h1>Câu ${index+1}/${questions.length}</h1><p>${q.q}</p>`;
+  q.options.forEach((o,i)=>{
+    const div=document.createElement('div');
+    div.className='option';
+    div.innerText=o;
+    div.onclick=()=>choose(i);
+    app.appendChild(div);
+  });
+}
+
+function choose(i) {
+  if (i === questions[index].answer) score++;
+  index++;
+  index < questions.length ? showQuestion() : finish();
+}
+
+function finish() {
+  app.innerHTML = `
+    <h1>Hoàn thành</h1>
+    <p>${student}</p>
+    <p>Điểm: ${score}/${questions.length}</p>
+    <button onclick="showMenu()">⬅ Menu</button>
+  `;
+}
+
+/* ===== TIỆN ÍCH ===== */
+function qv(id){ return document.getElementById(id).value.trim(); }
+function showToast(msg){
+  const t=document.createElement('div');
+  t.className='toast'; t.innerText=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2000);
+}
+
+showMenu();
+</script>
+</body>
+</html>
+
